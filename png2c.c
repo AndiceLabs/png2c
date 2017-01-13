@@ -14,8 +14,7 @@
 #include <stdlib.h>
 #include <png.h>
 
-#define RGB888toRGB565(r, g, b) ((r >> 3) << 11)| \
-    ((g >> 2) << 5)| ((b >> 3) << 0)
+#define RGB888toRGB565(r, g, b) ((r >> 3) << 11) | ((g >> 2) << 5) | ((b >> 3) << 0)
 
 #define RGB8888toRGB5A1(r, g, b, a) ((r >> 3) << 11)| \
     ((g >> 3) << 6)| ((b >> 3) << 1) | (a == 0x0)
@@ -47,7 +46,6 @@ int main( int argc, char* argv[] )
     }
 
     // open file
-    printf( "Opening file %s...\n", argv[1] );
     char header[8];
     file = fopen( argv[1], "rb" );
 
@@ -61,9 +59,6 @@ int main( int argc, char* argv[] )
     if ( argc == 3 && 0 == strcmp( argv[2], "-a" ) )
         generate5A1 = 1;
 
-    // read the header
-    printf( "Reading header...\n" );
-
     if ( fread( header, 1, 8, file ) <= 0 )
     {
         printf( "Could not read PNG header.\n" );
@@ -76,8 +71,6 @@ int main( int argc, char* argv[] )
         printf( "File is not a valid PNG file.\n" );
         return -1;
     }
-
-    printf( "Valid PNG file found. Reading more...\n" );
 
     // create the read struct
     pPng = png_create_read_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
@@ -144,7 +137,6 @@ int main( int argc, char* argv[] )
     char *imageName = malloc( len - 3 );
     memcpy( imageName, argv[1], len - 4 );
     imageName[len - 4] = 0;
-    printf( "Creating output file %s.c...\n", imageName );
 
     // create output file
     FILE *outputSource;
@@ -174,9 +166,9 @@ int main( int argc, char* argv[] )
 
             // the last pixel shouldn't have a comma
             if ( y == height - 1 && x == width - 1 )
-                fprintf( outputSource, "0x%02X, 0x%02X\n};\n", ( ( convPixel >> 8 ) & 0xFF ), ( convPixel & 0xFF ) );
+                fprintf( outputSource, "0x%02X, 0x%02X\n};\n", ( convPixel & 0xFF ), ( ( convPixel >> 8 ) & 0xFF ) );
             else
-                fprintf( outputSource, "0x%02X, 0x%02X, ", ( ( convPixel >> 8 ) & 0xFF ), ( convPixel & 0xFF ) );
+                fprintf( outputSource, "0x%02X, 0x%02X, ", ( convPixel & 0xFF ), ( ( convPixel >> 8 ) & 0xFF ) );
         }
 
         fprintf( outputSource, "\n" );
@@ -188,8 +180,6 @@ int main( int argc, char* argv[] )
         printf( "Output format is RGB5A1.\n" );
     else
         printf( "Output format is RGB565.\n" );
-
-    printf( "Done! Generated %s.c.\n", imageName );
 
     return 0;
 }
