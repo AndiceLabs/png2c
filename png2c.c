@@ -12,6 +12,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <png.h>
 
 #define RGB888toRGB565(r, g, b) ((r >> 3) << 11) | ((g >> 2) << 5) | ((b >> 3) << 0)
