@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <getopt.h>
 #include <png.h>
 
 #define RGB888toRGB565(r, g, b) ((r >> 3) << 11) | ((g >> 2) << 5) | ((b >> 3) << 0)
@@ -33,32 +35,85 @@ png_structp pPng;
 png_infop pInfo;
 int numPasses;
 png_bytep *rows;
+
 int generate5A1 = 0;
+int mirror_image = 0;
+
+
+void show_usage( char *progname )
+{
+    fprintf( stderr, "Usage: %s <mode> [file]\n", progname );
+    fprintf( stderr, "   File (required):\n" );
+    fprintf( stderr, "      Name of PNG file to convert to C source file.\n" );
+    fprintf( stderr, "      Output filename will have .png replaced with .c extension.\n" );
+    fprintf( stderr, "   Mode (optional):\n" );
+    fprintf( stderr, "      -h --help           Show usage.\n" );
+    fprintf( stderr, "      -a --rgb5a1         Output RGB5A1 instead of RGB565.\n" );
+    fprintf( stderr, "      -m --mirror         Mirror image around Y-axis.\n" );
+    exit( 1 );
+}
+
+
+void parse( int argc, char *argv[] )
+{
+    while( 1 )
+    {
+        static const struct option lopts[] =
+        {
+            { "rgb5a1",     0, 0, 'a' },
+            { "mirror",     0, 0, 'm' },
+            { NULL,         0, 0, 0 },
+        };
+        int c;
+
+        c = getopt_long( argc, argv, "am", lopts, NULL );
+
+        if( c == -1 )
+            break;
+
+        switch( c )
+        {
+            case 'a':
+            {
+                generate5A1 = 1;
+                break;
+            }
+
+            case 'm':
+            {
+                mirror_image = 1;
+                break;
+            }
+            
+            default:
+            case 'h':
+            {
+                show_usage( argv[ 0 ] );
+                break;
+            }
+        }
+    }
+}
+
 
 int main( int argc, char* argv[] )
 {
-    // check parameter
-    if ( argc != 2 && argc != 3 )
-    {
-        printf( "Usage: png2c [PNG file] [-a]\n"
-                "A header file will be generated in the same directory\n"
-                "If -a is provided then the output will be RGB5A1 instead of RGB565.\n" );
-        return -1;
-    }
-
-    // open file
     char header[8];
-    file = fopen( argv[1], "rb" );
+
+    if ( argc < 2 )
+    {
+        show_usage( argv[ 0 ] );
+        exit( 1 );
+    }
+    parse( argc, argv );
+
+    file = fopen( argv[ optind ], "rb" );
 
     if ( !file )
     {
-        printf( "Could not open file %s.\n", argv[1] );
+        printf( "Could not open file %s.\n", argv[ optind ] );
         return -1;
     }
-
-    // check if RGB5A1
-    if ( argc == 3 && 0 == strcmp( argv[2], "-a" ) )
-        generate5A1 = 1;
 
     if ( fread( header, 1, 8, file ) <= 0 )
     {
@@ -134,9 +189,9 @@ int main( int argc, char* argv[] )
     }
 
     // get the name of the image, without the extension (assume it ends with .png)
-    size_t len = strlen( argv[1] );
+    size_t len = strlen( argv[ optind ] );
     char *imageName = malloc( len - 3 );
-    memcpy( imageName, argv[1], len - 4 );
+    memcpy( imageName, argv[ optind ], len - 4 );
     imageName[len - 4] = 0;
 
     // create output file
@@ -162,7 +217,17 @@ int main( int argc, char* argv[] )
 
         for ( x = 0; x < width; x++ )
         {
-            png_byte* pixel = &( row[x * 4] );
+            png_byte *pixel;
+            
+            if ( mirror_image )
+            {
+                pixel = &( row[ (width - x) * 4] );
+            }
+            else
+            {
+                pixel = &( row[x * 4] );
+            }
+            
             unsigned short convPixel = generate5A1 ? RGB8888toRGB5A1( pixel[0], pixel[1], pixel[2], pixel[3] ) : RGB888toRGB565( pixel[0], pixel[1], pixel[2] );
 
             // the last pixel shouldn't have a comma
@@ -184,6 +249,3 @@ int main( int argc, char* argv[] )
 
     return 0;
 }
-
-
-
