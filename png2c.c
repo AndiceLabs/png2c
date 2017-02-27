@@ -221,7 +221,7 @@ int main( int argc, char* argv[] )
             
             if ( mirror_image )
             {
-                pixel = &( row[ (width - x) * 4] );
+                pixel = &( row[ (width - 1 - x) * 4] );
             }
             else
             {
